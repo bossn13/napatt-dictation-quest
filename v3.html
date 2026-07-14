@@ -133,19 +133,16 @@
   .status-line { margin-top: 12px; min-height: 18px; font-size: 13px; color: #9aa4c8; }
 
   /* ---------- Quiz screen ---------- */
-  #screen-quiz { padding-top: max(env(safe-area-inset-top), 10px); }
-
-  .prompt-bar {
-    padding: 10px 16px 12px;
-    text-align: center;
-    background: rgba(5, 7, 13, 0.7);
-    border-bottom: 1px solid rgba(245, 192, 74, 0.25);
+  #screen-quiz {
+    justify-content: center;
+    align-items: center;
   }
 
   .hud-topline {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    gap: 12px;
+    font-size: 10px;
     letter-spacing: 1px;
     color: var(--cyan);
     text-transform: uppercase;
@@ -160,30 +157,30 @@
     background: rgba(77, 216, 255, 0.12);
     border: 1px solid rgba(77, 216, 255, 0.4);
     color: var(--cyan);
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 1px;
     text-transform: uppercase;
   }
 
   #quiz-prompt {
     margin: 0;
-    font-size: clamp(17px, 4vw, 22px);
-    line-height: 1.35;
+    font-size: clamp(15px, 3.6vw, 19px);
+    line-height: 1.32;
     color: #fdf7ea;
   }
 
   .feedback-line {
-    min-height: 20px;
+    min-height: 18px;
     margin: 6px 0 0;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
   }
   .feedback-line.ok { color: var(--ok); }
   .feedback-line.bad { color: var(--bad); }
 
   .stage {
     position: relative;
-    margin: 10px auto 14px;
+    margin: auto;
     width: min(640px, 94vw);
     aspect-ratio: 4 / 3;
     border-radius: 18px;
@@ -192,6 +189,30 @@
     border: 1px solid rgba(245, 192, 74, 0.3);
     box-shadow: 0 0 30px rgba(0,0,0,0.5);
     flex-shrink: 0;
+  }
+
+  .prompt-overlay {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 52px;
+    bottom: 72px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .prompt-panel {
+    max-height: 100%;
+    overflow-y: auto;
+    text-align: center;
+    background: rgba(5, 7, 13, 0.82);
+    border: 1px solid rgba(245, 192, 74, 0.4);
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.5);
   }
 
   .stage.no-camera { background: linear-gradient(160deg, #10131f, #05070d); }
@@ -311,20 +332,22 @@
   </section>
 
   <section id="screen-quiz" class="screen">
-    <header class="prompt-bar">
-      <div class="hud-topline">
-        <span id="quiz-subject-label">SUBJECT</span>
-        <span id="quiz-progress-label">Question 1/10</span>
-      </div>
-      <span id="quiz-pos" class="pos-tag">noun</span>
-      <h2 id="quiz-prompt">Loading…</h2>
-      <p id="quiz-feedback" class="feedback-line" aria-live="polite"></p>
-    </header>
-
     <div class="stage" id="stage">
       <video id="camera-video" playsinline muted autoplay></video>
       <canvas id="hud-canvas"></canvas>
       <div class="no-camera-note">ไม่พบกล้อง — แตะปุ่มด้านล่างเพื่อเล่นต่อได้ตามปกติ</div>
+
+      <div class="prompt-overlay">
+        <div class="prompt-panel">
+          <div class="hud-topline">
+            <span id="quiz-subject-label">SUBJECT</span>
+            <span id="quiz-progress-label">Question 1/10</span>
+          </div>
+          <span id="quiz-pos" class="pos-tag">noun</span>
+          <h2 id="quiz-prompt">Loading…</h2>
+          <p id="quiz-feedback" class="feedback-line" aria-live="polite"></p>
+        </div>
+      </div>
 
       <button class="gesture-btn side-btn listen-btn" data-id="listen">🔊 ฟังคำศัพท์</button>
       <button class="gesture-btn side-btn exit-btn" data-id="exit">✕ ออก</button>
@@ -541,7 +564,7 @@ class FaceController {
       });
       this.available = true;
     } catch (err) {
-      console.warn("Face visor unavailable, continuing hand-only:", err);
+      console.warn("Head-flame effect unavailable, continuing hand-only:", err);
       this.available = false;
     }
   }
@@ -623,71 +646,69 @@ class HudRenderer {
     return tip;
   }
 
-  drawVisor(faceResult) {
+  drawHeadFlame(faceResult, now) {
     const lm = faceResult?.faceLandmarks?.[0];
     if (!lm) return;
     const P = (i) => toStagePoint(lm[i], this.rect);
     const ctx = this.ctx;
 
     const forehead = P(10);
+    const chin = P(152);
     const leftTemple = P(127);
     const rightTemple = P(356);
-    const leftCheek = P(234);
-    const rightCheek = P(454);
-    const leftEyeA = P(33), leftEyeB = P(133), leftEyeC = P(159), leftEyeD = P(145);
-    const rightEyeA = P(263), rightEyeB = P(362), rightEyeC = P(386), rightEyeD = P(374);
-
-    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-    const leftEyeCenter = mid(mid(leftEyeA, leftEyeB), mid(leftEyeC, leftEyeD));
-    const rightEyeCenter = mid(mid(rightEyeA, rightEyeB), mid(rightEyeC, rightEyeD));
-    const leftEyeW = dist(leftEyeA, leftEyeB) * 1.7;
-    const rightEyeW = dist(rightEyeA, rightEyeB) * 1.7;
+    const faceH = dist(forehead, chin);
+    const faceW = dist(leftTemple, rightTemple);
+
+    const baseX = forehead.x;
+    const baseY = forehead.y - faceH * 0.08;
+    const t = now / 1000;
+
+    const blob = (w, h, phase, colorStops) => {
+      const hw = w / 2;
+      const wobble = Math.sin(t * 5 + phase) * w * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(baseX - hw, baseY);
+      ctx.bezierCurveTo(
+        baseX - hw * 1.2, baseY - h * 0.4,
+        baseX - hw * 0.25 + wobble, baseY - h * 0.6,
+        baseX + wobble * 0.7, baseY - h
+      );
+      ctx.bezierCurveTo(
+        baseX + hw * 0.25 + wobble, baseY - h * 0.6,
+        baseX + hw * 1.2, baseY - h * 0.4,
+        baseX + hw, baseY
+      );
+      ctx.bezierCurveTo(
+        baseX + hw * 0.4, baseY + h * 0.06,
+        baseX - hw * 0.4, baseY + h * 0.06,
+        baseX - hw, baseY
+      );
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(baseX, baseY, baseX, baseY - h);
+      for (const [stop, color] of colorStops) grad.addColorStop(stop, color);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    };
 
     ctx.save();
+    ctx.shadowColor = "rgba(255, 140, 60, 0.85)";
+    ctx.shadowBlur = 20;
 
-    const bandY = forehead.y - Math.max(6, (leftTemple.y - forehead.y) * -0.35);
-    const grad = ctx.createLinearGradient(leftTemple.x, 0, rightTemple.x, 0);
-    grad.addColorStop(0, "#ffe08a");
-    grad.addColorStop(0.5, "#d7263d");
-    grad.addColorStop(1, "#ffe08a");
-
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = 6;
-    ctx.lineCap = "round";
-    ctx.shadowColor = "rgba(215, 38, 61, 0.7)";
-    ctx.shadowBlur = 14;
-    ctx.beginPath();
-    ctx.moveTo(leftTemple.x, leftTemple.y);
-    ctx.quadraticCurveTo(forehead.x, bandY, rightTemple.x, rightTemple.y);
-    ctx.stroke();
-
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(245, 192, 74, 0.75)";
-    ctx.shadowBlur = 4;
-    ctx.beginPath();
-    ctx.moveTo(leftTemple.x, leftTemple.y);
-    ctx.lineTo(leftCheek.x, leftCheek.y);
-    ctx.moveTo(rightTemple.x, rightTemple.y);
-    ctx.lineTo(rightCheek.x, rightCheek.y);
-    ctx.stroke();
-
-    for (const [center, w] of [[leftEyeCenter, leftEyeW], [rightEyeCenter, rightEyeW]]) {
-      const rx = Math.max(10, w / 2);
-      const ry = rx * 0.55;
-      const lensGrad = ctx.createRadialGradient(center.x, center.y, 1, center.x, center.y, rx);
-      lensGrad.addColorStop(0, "rgba(160, 235, 255, 0.95)");
-      lensGrad.addColorStop(1, "rgba(77, 216, 255, 0.25)");
-      ctx.fillStyle = lensGrad;
-      ctx.shadowColor = "rgba(77, 216, 255, 0.9)";
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.ellipse(center.x, center.y, rx, ry, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(245, 192, 74, 0.85)";
-      ctx.stroke();
-    }
+    blob(faceW * 0.62, faceH * 0.85, 0, [
+      [0, "rgba(215, 38, 61, 0.85)"],
+      [0.55, "rgba(255, 120, 40, 0.75)"],
+      [1, "rgba(255, 120, 40, 0)"],
+    ]);
+    blob(faceW * 0.42, faceH * 0.68, 1.6, [
+      [0, "rgba(245, 192, 74, 0.9)"],
+      [0.6, "rgba(255, 200, 90, 0.8)"],
+      [1, "rgba(255, 224, 138, 0)"],
+    ]);
+    blob(faceW * 0.22, faceH * 0.48, 3.1, [
+      [0, "rgba(255, 243, 208, 0.95)"],
+      [1, "rgba(255, 243, 208, 0)"],
+    ]);
 
     ctx.restore();
   }
@@ -1070,7 +1091,7 @@ class App {
 
     this.hud.clear();
     const tip = this.hud.drawHand(this.lastHand);
-    this.hud.drawVisor(this.lastFace);
+    this.hud.drawHeadFlame(this.lastFace, now);
 
     const hoverState = this.selection.update(tip || null, stageRect, now);
     for (const [id, el] of this.selection.targets) {
