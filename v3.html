@@ -191,21 +191,24 @@
     flex-shrink: 0;
   }
 
-  .prompt-overlay {
+  .stage-ui {
     position: absolute;
-    left: 8px;
-    right: 8px;
-    top: 52px;
-    bottom: 72px;
+    inset: 0;
     z-index: 4;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    padding: 50px 8px 10px;
     pointer-events: none;
   }
 
+  .prompt-overlay {
+    display: flex;
+    justify-content: center;
+  }
+
   .prompt-panel {
-    max-height: 100%;
+    max-width: 100%;
+    max-height: 40vh;
     overflow-y: auto;
     text-align: center;
     background: rgba(5, 7, 13, 0.82);
@@ -213,6 +216,14 @@
     border-radius: 16px;
     padding: 12px 16px;
     box-shadow: 0 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .answers-slot {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .stage.no-camera { background: linear-gradient(160deg, #10131f, #05070d); }
@@ -256,11 +267,10 @@
   .exit-btn { right: 8px; }
 
   .answers {
-    position: absolute;
-    left: 0; right: 0; bottom: 8px;
     display: flex;
     gap: 8px;
-    padding: 0 8px;
+    width: 100%;
+    pointer-events: auto;
   }
   .answer-btn {
     position: static;
@@ -337,25 +347,29 @@
       <canvas id="hud-canvas"></canvas>
       <div class="no-camera-note">ไม่พบกล้อง — แตะปุ่มด้านล่างเพื่อเล่นต่อได้ตามปกติ</div>
 
-      <div class="prompt-overlay">
-        <div class="prompt-panel">
-          <div class="hud-topline">
-            <span id="quiz-subject-label">SUBJECT</span>
-            <span id="quiz-progress-label">Question 1/10</span>
-          </div>
-          <span id="quiz-pos" class="pos-tag">noun</span>
-          <h2 id="quiz-prompt">Loading…</h2>
-          <p id="quiz-feedback" class="feedback-line" aria-live="polite"></p>
-        </div>
-      </div>
-
       <button class="gesture-btn side-btn listen-btn" data-id="listen">🔊 ฟังคำศัพท์</button>
       <button class="gesture-btn side-btn exit-btn" data-id="exit">✕ ออก</button>
 
-      <div class="answers" id="answers">
-        <button class="gesture-btn answer-btn" data-id="answer-0"></button>
-        <button class="gesture-btn answer-btn" data-id="answer-1"></button>
-        <button class="gesture-btn answer-btn" data-id="answer-2"></button>
+      <div class="stage-ui">
+        <div class="prompt-overlay">
+          <div class="prompt-panel">
+            <div class="hud-topline">
+              <span id="quiz-subject-label">SUBJECT</span>
+              <span id="quiz-progress-label">Question 1/10</span>
+            </div>
+            <span id="quiz-pos" class="pos-tag">noun</span>
+            <h2 id="quiz-prompt">Loading…</h2>
+            <p id="quiz-feedback" class="feedback-line" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="answers-slot">
+          <div class="answers" id="answers">
+            <button class="gesture-btn answer-btn" data-id="answer-0"></button>
+            <button class="gesture-btn answer-btn" data-id="answer-1"></button>
+            <button class="gesture-btn answer-btn" data-id="answer-2"></button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
