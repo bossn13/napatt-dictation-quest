@@ -2,7 +2,7 @@ import {FaceLandmarker,HandLandmarker,FilesetResolver} from 'https://cdn.jsdeliv
 
 const video=document.querySelector('#cam'),game=document.querySelector('#game'),start=document.querySelector('#start');
 const style=document.createElement('style');
-style.textContent=`#hud{position:absolute;z-index:2;inset:0;width:100%;height:100%;pointer-events:none}.choice,.listen,.exit{position:relative;overflow:hidden}.choice.hand-hover:after,.listen.hand-hover:after,.exit.hand-hover:after{content:"";position:absolute;inset:3px;border-radius:inherit;border:3px solid transparent;background:conic-gradient(#ffd161 var(--charge,0%),transparent 0) border-box;mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);mask-composite:exclude;animation:charge .65s linear forwards}@keyframes charge{to{--charge:100%}}`;
+style.textContent=`#draw{display:none!important}#hud{position:absolute;z-index:2;inset:0;width:100%;height:100%;pointer-events:none}.choice,.listen,.exit{position:relative;overflow:hidden}.choice.hand-hover:after,.listen.hand-hover:after,.exit.hand-hover:after{content:"";position:absolute;inset:3px;border-radius:inherit;border:3px solid transparent;background:conic-gradient(#ffd161 var(--charge,0%),transparent 0) border-box;mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);mask-composite:exclude;animation:charge .65s linear forwards}@keyframes charge{to{--charge:100%}}`;
 document.head.append(style);
 const c=document.createElement('canvas');c.id='hud';game.append(c);const x=c.getContext('2d');let face,hand,last=0,ready=false;
 function resize(){c.width=innerWidth;c.height=innerHeight}addEventListener('resize',resize);resize();
