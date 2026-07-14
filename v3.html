@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Dictation Power-HUD Word Catcher</title>
+<style>
+  :root {
+    --gold: #f5c04a;
+    --gold-bright: #ffe08a;
+    --gold-dim: #9c7a2a;
+    --red: #d7263d;
+    --red-bright: #ff4d5e;
+    --cyan: #4dd8ff;
+    --bg-deep: #05070d;
+    --bg-panel: #0d1220;
+    --ok: #3ddc84;
+    --bad: #ff5a5a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: radial-gradient(circle at 50% -10%, #201225 0%, var(--bg-deep) 55%, #020103 100%);
+    color: #f4ecff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "TH Sarabun New", sans-serif;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  #app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .screen {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow-y: auto;
+  }
+  .screen.active { display: flex; }
+
+  /* ---------- Start screen ---------- */
+  .start-panel {
+    margin: auto;
+    width: min(640px, 92vw);
+    padding: 28px 24px 32px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.25));
+    border: 1px solid rgba(245, 192, 74, 0.35);
+    box-shadow: 0 0 40px rgba(215, 38, 61, 0.15), inset 0 0 30px rgba(245, 192, 74, 0.06);
+    text-align: center;
+  }
+
+  .start-panel h1 {
+    margin: 0 0 4px;
+    font-size: clamp(24px, 5vw, 34px);
+    letter-spacing: 2px;
+    color: var(--gold-bright);
+    text-shadow: 0 0 18px rgba(245, 192, 74, 0.6);
+  }
+  .start-panel h1 span { color: var(--red-bright); text-shadow: 0 0 18px rgba(255, 77, 94, 0.7); }
+
+  .subtitle { margin: 0 0 22px; color: #cfd3ea; font-size: 15px; }
+
+  .subject-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .subject-btn {
+    padding: 16px 10px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(77, 216, 255, 0.35);
+    background: rgba(13, 18, 32, 0.85);
+    color: #eaf6ff;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  }
+  .subject-btn .icon { display: block; font-size: 26px; margin-bottom: 6px; }
+  .subject-btn:active { transform: scale(0.96); }
+  .subject-btn.selected {
+    border-color: var(--gold);
+    background: linear-gradient(180deg, rgba(245,192,74,0.18), rgba(215,38,61,0.12));
+    box-shadow: 0 0 20px rgba(245, 192, 74, 0.35);
+  }
+
+  .camera-notice {
+    font-size: 13px;
+    color: #b9c0dd;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+  }
+  .camera-notice p { margin: 4px 0; }
+
+  .btn-primary, .btn-secondary {
+    border: none;
+    border-radius: 14px;
+    padding: 16px 20px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--red-bright), var(--gold));
+    color: #170305;
+    box-shadow: 0 6px 22px rgba(215, 38, 61, 0.4);
+  }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    color: #eaf6ff;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .status-line { margin-top: 12px; min-height: 18px; font-size: 13px; color: #9aa4c8; }
+
+  /* ---------- Quiz screen ---------- */
+  #screen-quiz { padding-top: max(env(safe-area-inset-top), 10px); }
+
+  .prompt-bar {
+    padding: 10px 16px 12px;
+    text-align: center;
+    background: rgba(5, 7, 13, 0.7);
+    border-bottom: 1px solid rgba(245, 192, 74, 0.25);
+  }
+
+  .hud-topline {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .pos-tag {
+    display: inline-block;
+    margin: 0 0 6px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(77, 216, 255, 0.12);
+    border: 1px solid rgba(77, 216, 255, 0.4);
+    color: var(--cyan);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #quiz-prompt {
+    margin: 0;
+    font-size: clamp(17px, 4vw, 22px);
+    line-height: 1.35;
+    color: #fdf7ea;
+  }
+
+  .feedback-line {
+    min-height: 20px;
+    margin: 6px 0 0;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .feedback-line.ok { color: var(--ok); }
+  .feedback-line.bad { color: var(--bad); }
+
+  .stage {
+    position: relative;
+    margin: 10px auto 14px;
+    width: min(640px, 94vw);
+    aspect-ratio: 4 / 3;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(245, 192, 74, 0.3);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+  }
+
+  .stage.no-camera { background: linear-gradient(160deg, #10131f, #05070d); }
+
+  #camera-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+  }
+
+  #hud-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .gesture-btn {
+    position: absolute;
+    z-index: 2;
+    border: 1.5px solid rgba(245, 192, 74, 0.55);
+    background: rgba(8, 10, 18, 0.72);
+    color: #fdf7ea;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 8px 10px;
+    backdrop-filter: blur(2px);
+  }
+  .gesture-btn.correct { background: rgba(61, 220, 132, 0.35); border-color: var(--ok); }
+  .gesture-btn.wrong { background: rgba(255, 90, 90, 0.35); border-color: var(--bad); }
+
+  .side-btn { top: 8px; font-size: 12px; padding: 8px 10px; }
+  .listen-btn { left: 8px; }
+  .exit-btn { right: 8px; }
+
+  .answers {
+    position: absolute;
+    left: 0; right: 0; bottom: 8px;
+    display: flex;
+    gap: 8px;
+    padding: 0 8px;
+  }
+  .answer-btn {
+    position: static;
+    flex: 1;
+    min-height: 54px;
+    font-size: clamp(13px, 3vw, 16px);
+  }
+
+  .no-camera-note {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 13px;
+    color: #8892b8;
+    padding: 20px;
+    z-index: 1;
+  }
+  .stage.no-camera .no-camera-note { display: flex; }
+
+  /* ---------- Complete screen ---------- */
+  .complete-panel {
+    margin: auto;
+    width: min(500px, 92vw);
+    text-align: center;
+    padding: 30px 22px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.25));
+    border: 1px solid rgba(245, 192, 74, 0.35);
+    box-shadow: 0 0 40px rgba(215, 38, 61, 0.15);
+    position: relative;
+  }
+  .complete-panel h1 {
+    color: var(--gold-bright);
+    letter-spacing: 2px;
+    text-shadow: 0 0 18px rgba(245, 192, 74, 0.6);
+    margin-top: 0;
+  }
+  .score-line { font-size: 20px; font-weight: 700; margin-bottom: 22px; }
+  .complete-actions { display: flex; flex-direction: column; gap: 10px; }
+  .complete-actions .gesture-btn {
+    position: relative;
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-start" class="screen active">
+    <div class="start-panel">
+      <h1>DICTATION <span>POWER-HUD</span></h1>
+      <p class="subtitle">เลือกวิชา แล้วเริ่มภารกิจฝึกคำศัพท์</p>
+
+      <div class="subject-grid" id="subject-grid"></div>
+
+      <div class="camera-notice">
+        <p>เกมนี้ใช้กล้องหน้าเพื่อดูท่ามือของหนู กดปุ่มด้านล่างเพื่ออนุญาตกล้อง</p>
+        <p>ถ้าไม่สะดวกใช้กล้อง แตะหน้าจอเลือกคำตอบแทนได้ตลอดเกม</p>
+      </div>
+
+      <button id="btn-start-mission" class="btn-primary" disabled>เริ่มภารกิจด้วยกล้อง</button>
+      <p id="start-status" class="status-line"></p>
+    </div>
+  </section>
+
+  <section id="screen-quiz" class="screen">
+    <header class="prompt-bar">
+      <div class="hud-topline">
+        <span id="quiz-subject-label">SUBJECT</span>
+        <span id="quiz-progress-label">Question 1/10</span>
+      </div>
+      <span id="quiz-pos" class="pos-tag">noun</span>
+      <h2 id="quiz-prompt">Loading…</h2>
+      <p id="quiz-feedback" class="feedback-line" aria-live="polite"></p>
+    </header>
+
+    <div class="stage" id="stage">
+      <video id="camera-video" playsinline muted autoplay></video>
+      <canvas id="hud-canvas"></canvas>
+      <div class="no-camera-note">ไม่พบกล้อง — แตะปุ่มด้านล่างเพื่อเล่นต่อได้ตามปกติ</div>
+
+      <button class="gesture-btn side-btn listen-btn" data-id="listen">🔊 ฟังคำศัพท์</button>
+      <button class="gesture-btn side-btn exit-btn" data-id="exit">✕ ออก</button>
+
+      <div class="answers" id="answers">
+        <button class="gesture-btn answer-btn" data-id="answer-0"></button>
+        <button class="gesture-btn answer-btn" data-id="answer-1"></button>
+        <button class="gesture-btn answer-btn" data-id="answer-2"></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-complete" class="screen">
+    <div class="complete-panel">
+      <h1>MISSION COMPLETE</h1>
+      <p id="complete-score" class="score-line">Score: 0/10</p>
+      <div class="complete-actions">
+        <button class="gesture-btn" data-id="replay">🔁 เล่นวิชานี้อีกครั้ง</button>
+        <button class="gesture-btn" data-id="back-start">🏠 กลับหน้าเลือกวิชา</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script type="module">
+import {
+  FilesetResolver,
+  HandLandmarker,
+  FaceLandmarker,
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35";
+
+const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm";
+const HAND_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const FACE_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+
+const HOVER_MS = 650;
+const COOLDOWN_MS = 900;
+const DETECT_INTERVAL_MS = 80;
+const QUESTIONS_PER_SUBJECT = 10;
+
+const POS_LABELS = { "n.": "noun", "v.": "verb", "adj.": "adjective" };
+
+const SUBJECT_ICONS = {
+  "Interactive English IEP": "📖",
+  "Mathematics IEP": "🔢",
+  "Science IEP": "🔬",
+  "Social Studies IEP": "🌍",
+  "SGI (Computing Science)": "💻",
+};
+
+const VOCAB = {
+  "Interactive English IEP": [
+    { word: "climate", pos: "n.", def: "The usual weather in a place." },
+    { word: "influence", pos: "v.", def: "To change the way someone thinks or behaves." },
+    { word: "artificial", pos: "adj.", def: "Not natural; made by people." },
+    { word: "extinction", pos: "n.", def: "When every animal of one kind dies and no one is left." },
+    { word: "marsupial", pos: "n.", def: "An animal that carries its baby in a pocket or \"pouch.\"" },
+    { word: "carnivorous", pos: "adj.", def: "An animal that eats meat." },
+    { word: "instrument", pos: "n.", def: "An object used for making music or for a special job." },
+    { word: "belong", pos: "v.", def: "To be owned by someone." },
+    { word: "look after", pos: "v.", def: "To take care of someone or something." },
+    { word: "tilt", pos: "v.", def: "To move something so it is not straight; to lean." },
+  ],
+  "Mathematics IEP": [
+    { word: "increasing order", pos: "n.", def: "An arrangement of numbers from the least value to the greatest value." },
+    { word: "factor", pos: "n.", def: "An integer that divides another integer without leaving a remainder." },
+    { word: "common multiple", pos: "n.", def: "A number that is a multiple of two or more specific numbers." },
+    { word: "prime number", pos: "n.", def: "A natural number greater than 1 that has no positive divisors other than 1 and itself." },
+    { word: "improper fraction", pos: "n.", def: "A fraction in which the numerator is greater than or equal to the denominator." },
+    { word: "vertex", pos: "n.", def: "A point where two or more line segments or rays meet to form an angle, or a corner of a shape." },
+    { word: "perpendicular", pos: "adj.", def: "Describes two lines or surfaces that meet at a right angle, exactly 90 degrees." },
+    { word: "reflex angle", pos: "n.", def: "An angle that is more than 180 degrees but less than 360 degrees." },
+    { word: "numerator", pos: "n.", def: "The part of a fraction above the line, showing the number of parts being considered." },
+    { word: "dividend", pos: "n.", def: "The number or quantity that is to be divided by another number, the divisor." },
+  ],
+  "Science IEP": [
+    { word: "resemble", pos: "v.", def: "To look like or be similar to someone or something." },
+    { word: "classification", pos: "n.", def: "The process of grouping things by their type or similarities." },
+    { word: "vertebrate", pos: "n.", def: "An animal distinguished by having a backbone or spinal column." },
+    { word: "exoskeleton", pos: "n.", def: "A hard, rigid external covering that supports and protects an animal's body." },
+    { word: "seedling", pos: "n.", def: "A young plant that has just started to grow." },
+    { word: "rust", pos: "n.", def: "A reddish-brown substance that forms on iron and steel when they react with air and water." },
+    { word: "insoluble", pos: "adj.", def: "A substance that will not dissolve in a solvent even after mixing." },
+    { word: "strength", pos: "n.", def: "The ability to resist being moved or broken by a force." },
+    { word: "kinetic energy", pos: "n.", def: "The form of energy that an object possesses due to its motion." },
+    { word: "expansion", pos: "n.", def: "The process of becoming greater in size, number, or amount." },
+  ],
+  "Social Studies IEP": [
+    { word: "geographical tool", pos: "n.", def: "A tool used to study and understand the Earth." },
+    { word: "aerial photograph", pos: "n.", def: "A photo of the Earth taken from an airplane." },
+    { word: "satellite image", pos: "n.", def: "A picture of the Earth taken by a satellite in space." },
+    { word: "axis", pos: "n.", def: "An imaginary line through the Earth from the North Pole to the South Pole." },
+    { word: "leap year", pos: "n.", def: "A year with 366 days, including February 29." },
+    { word: "weather", pos: "n.", def: "The condition of the air outside at a certain time." },
+    { word: "altitude", pos: "n.", def: "The height of a place above sea level." },
+    { word: "humidity", pos: "n.", def: "The amount of water vapor in the air." },
+    { word: "agriculture", pos: "n.", def: "Growing and harvesting crops and raising animals." },
+    { word: "suburb", pos: "n.", def: "A place where people live just outside of a city or town." },
+  ],
+  "SGI (Computing Science)": [
+    { word: "order", pos: "n.", def: "The arrangement of steps." },
+    { word: "breakdown", pos: "n.", def: "To break a problem into smaller parts." },
+    { word: "script", pos: "n.", def: "A set of instructions or words that tell the computer what to do." },
+    { word: "stage", pos: "n.", def: "The area where the project happens and sprites perform actions." },
+    { word: "online community", pos: "n.", def: "A group of people who interact and share ideas on the internet." },
+    { word: "account", pos: "n.", def: "Personal information used to log in to a website or app." },
+    { word: "text", pos: "n.", def: "Written words used to show information." },
+    { word: "template", pos: "n.", def: "A ready-made design for creating presentations." },
+    { word: "safety", pos: "n.", def: "Being protected from danger." },
+    { word: "personal information", pos: "n.", def: "Information about yourself like name, address, or phone number." },
+  ],
+};
+
+const HAND_CONNECTIONS = [
+  [0, 1], [1, 2], [2, 3], [3, 4],
+  [0, 5], [5, 6], [6, 7], [7, 8],
+  [5, 9], [9, 10], [10, 11], [11, 12],
+  [9, 13], [13, 14], [14, 15], [15, 16],
+  [13, 17], [17, 18], [18, 19], [19, 20],
+  [0, 17],
+];
+
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildQuestions(subject) {
+  const words = VOCAB[subject];
+  const order = shuffle(words.map((_, i) => i)).slice(0, QUESTIONS_PER_SUBJECT);
+  return order.map((idx) => {
+    const item = words[idx];
+    const others = words.filter((_, i) => i !== idx);
+    const distractors = shuffle(others).slice(0, 2);
+    const choices = shuffle([item.word, ...distractors.map((d) => d.word)]);
+    return {
+      word: item.word,
+      pos: item.pos,
+      def: item.def,
+      choices,
+      correctIndex: choices.indexOf(item.word),
+    };
+  });
+}
+
+class CameraController {
+  constructor(videoEl) {
+    this.video = videoEl;
+    this.stream = null;
+  }
+
+  async start() {
+    if (this.stream) return true;
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+    this.video.srcObject = this.stream;
+    await this.video.play();
+    await new Promise((resolve) => {
+      if (this.video.readyState >= 2) return resolve();
+      this.video.addEventListener("loadedmetadata", () => resolve(), { once: true });
+    });
+    return true;
+  }
+
+  stop() {
+    if (this.stream) {
+      this.stream.getTracks().forEach((t) => t.stop());
+      this.stream = null;
+    }
+    this.video.srcObject = null;
+  }
+}
+
+class HandController {
+  constructor() { this.model = null; }
+
+  async init(vision) {
+    this.model = await HandLandmarker.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: HAND_MODEL_URL, delegate: "GPU" },
+      runningMode: "VIDEO",
+      numHands: 1,
+    });
+  }
+
+  detect(video, ts) {
+    if (!this.model) return null;
+    return this.model.detectForVideo(video, ts);
+  }
+
+  close() {
+    this.model?.close();
+    this.model = null;
+  }
+}
+
+class FaceController {
+  constructor() { this.model = null; this.available = false; }
+
+  async init(vision) {
+    try {
+      this.model = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: FACE_MODEL_URL, delegate: "GPU" },
+        runningMode: "VIDEO",
+        numFaces: 1,
+      });
+      this.available = true;
+    } catch (err) {
+      console.warn("Face visor unavailable, continuing hand-only:", err);
+      this.available = false;
+    }
+  }
+
+  detect(video, ts) {
+    if (!this.model) return null;
+    return this.model.detectForVideo(video, ts);
+  }
+
+  close() {
+    this.model?.close();
+    this.model = null;
+    this.available = false;
+  }
+}
+
+function toStagePoint(lm, rect) {
+  return { x: (1 - lm.x) * rect.width, y: lm.y * rect.height };
+}
+
+class HudRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
+  }
+
+  resize(rect) {
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = Math.round(rect.width * dpr);
+    this.canvas.height = Math.round(rect.height * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.rect = rect;
+  }
+
+  clear() {
+    this.ctx.clearRect(0, 0, this.rect.width, this.rect.height);
+  }
+
+  drawHand(handResult) {
+    const lm = handResult?.landmarks?.[0];
+    if (!lm) return;
+    const pts = lm.map((p) => toStagePoint(p, this.rect));
+    const ctx = this.ctx;
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(77, 216, 255, 0.85)";
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = "rgba(77, 216, 255, 0.7)";
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    for (const [a, b] of HAND_CONNECTIONS) {
+      ctx.moveTo(pts[a].x, pts[a].y);
+      ctx.lineTo(pts[b].x, pts[b].y);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(77, 216, 255, 0.9)";
+    ctx.shadowBlur = 4;
+    for (const p of pts) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tip = pts[8];
+    ctx.shadowColor = "rgba(245, 192, 74, 0.9)";
+    ctx.shadowBlur = 16;
+    ctx.strokeStyle = "#f5c04a";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(tip.x, tip.y, 16, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(245, 192, 74, 0.35)";
+    ctx.beginPath();
+    ctx.arc(tip.x, tip.y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    return tip;
+  }
+
+  drawVisor(faceResult) {
+    const lm = faceResult?.faceLandmarks?.[0];
+    if (!lm) return;
+    const P = (i) => toStagePoint(lm[i], this.rect);
+    const ctx = this.ctx;
+
+    const forehead = P(10);
+    const leftTemple = P(127);
+    const rightTemple = P(356);
+    const leftCheek = P(234);
+    const rightCheek = P(454);
+    const leftEyeA = P(33), leftEyeB = P(133), leftEyeC = P(159), leftEyeD = P(145);
+    const rightEyeA = P(263), rightEyeB = P(362), rightEyeC = P(386), rightEyeD = P(374);
+
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const leftEyeCenter = mid(mid(leftEyeA, leftEyeB), mid(leftEyeC, leftEyeD));
+    const rightEyeCenter = mid(mid(rightEyeA, rightEyeB), mid(rightEyeC, rightEyeD));
+    const leftEyeW = dist(leftEyeA, leftEyeB) * 1.7;
+    const rightEyeW = dist(rightEyeA, rightEyeB) * 1.7;
+
+    ctx.save();
+
+    const bandY = forehead.y - Math.max(6, (leftTemple.y - forehead.y) * -0.35);
+    const grad = ctx.createLinearGradient(leftTemple.x, 0, rightTemple.x, 0);
+    grad.addColorStop(0, "#ffe08a");
+    grad.addColorStop(0.5, "#d7263d");
+    grad.addColorStop(1, "#ffe08a");
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.shadowColor = "rgba(215, 38, 61, 0.7)";
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.moveTo(leftTemple.x, leftTemple.y);
+    ctx.quadraticCurveTo(forehead.x, bandY, rightTemple.x, rightTemple.y);
+    ctx.stroke();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(245, 192, 74, 0.75)";
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.moveTo(leftTemple.x, leftTemple.y);
+    ctx.lineTo(leftCheek.x, leftCheek.y);
+    ctx.moveTo(rightTemple.x, rightTemple.y);
+    ctx.lineTo(rightCheek.x, rightCheek.y);
+    ctx.stroke();
+
+    for (const [center, w] of [[leftEyeCenter, leftEyeW], [rightEyeCenter, rightEyeW]]) {
+      const rx = Math.max(10, w / 2);
+      const ry = rx * 0.55;
+      const lensGrad = ctx.createRadialGradient(center.x, center.y, 1, center.x, center.y, rx);
+      lensGrad.addColorStop(0, "rgba(160, 235, 255, 0.95)");
+      lensGrad.addColorStop(1, "rgba(77, 216, 255, 0.25)");
+      ctx.fillStyle = lensGrad;
+      ctx.shadowColor = "rgba(77, 216, 255, 0.9)";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.ellipse(center.x, center.y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(245, 192, 74, 0.85)";
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  drawRing(rect, progress, active) {
+    if (progress <= 0) return;
+    const ctx = this.ctx;
+    const cx = rect.left - this.rect.left + rect.width / 2;
+    const cy = rect.top - this.rect.top + rect.height / 2;
+    const r = Math.min(rect.width, rect.height) / 2 + 6;
+
+    ctx.save();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(245, 192, 74, 0.25)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = active ? "#ffe08a" : "#f5c04a";
+    ctx.shadowColor = "rgba(245, 192, 74, 0.9)";
+    ctx.shadowBlur = 10;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class SelectionController {
+  constructor() {
+    this.targets = new Map();
+    this.enabled = true;
+    this.hover = { targetId: null, startedAt: 0 };
+    this.lastTriggerAt = -Infinity;
+    this.onTrigger = null;
+  }
+
+  setTargets(map) {
+    this.targets = map;
+    this.hover = { targetId: null, startedAt: 0 };
+  }
+
+  setEnabled(v) {
+    this.enabled = v;
+    if (!v) this.hover = { targetId: null, startedAt: 0 };
+  }
+
+  hitTest(point, stageRect) {
+    if (!point) return null;
+    for (const [id, el] of this.targets) {
+      const r = el.getBoundingClientRect();
+      const left = r.left - stageRect.left;
+      const top = r.top - stageRect.top;
+      if (point.x >= left && point.x <= left + r.width && point.y >= top && point.y <= top + r.height) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  update(cursorPoint, stageRect, now) {
+    if (!this.enabled) return { targetId: null, progress: 0 };
+
+    if (now - this.lastTriggerAt < COOLDOWN_MS) {
+      this.hover = { targetId: null, startedAt: 0 };
+      return { targetId: null, progress: 0 };
+    }
+
+    const hitId = this.hitTest(cursorPoint, stageRect);
+    if (!hitId) {
+      this.hover = { targetId: null, startedAt: 0 };
+      return { targetId: null, progress: 0 };
+    }
+
+    if (this.hover.targetId !== hitId) {
+      this.hover = { targetId: hitId, startedAt: now };
+    }
+
+    const progress = clamp((now - this.hover.startedAt) / HOVER_MS, 0, 1);
+    if (progress >= 1) {
+      this.lastTriggerAt = now;
+      this.hover = { targetId: null, startedAt: 0 };
+      this.onTrigger?.(hitId);
+      return { targetId: hitId, progress: 1 };
+    }
+    return { targetId: hitId, progress };
+  }
+
+  clickTrigger(id) {
+    this.lastTriggerAt = performance.now();
+    this.hover = { targetId: null, startedAt: 0 };
+    this.onTrigger?.(id);
+  }
+}
+
+class App {
+  constructor() {
+    this.screens = {
+      start: document.getElementById("screen-start"),
+      quiz: document.getElementById("screen-quiz"),
+      complete: document.getElementById("screen-complete"),
+    };
+    this.subjectGrid = document.getElementById("subject-grid");
+    this.startBtn = document.getElementById("btn-start-mission");
+    this.startStatus = document.getElementById("start-status");
+
+    this.video = document.getElementById("camera-video");
+    this.stageEl = document.getElementById("stage");
+    this.canvas = document.getElementById("hud-canvas");
+    this.subjectLabel = document.getElementById("quiz-subject-label");
+    this.progressLabel = document.getElementById("quiz-progress-label");
+    this.posTag = document.getElementById("quiz-pos");
+    this.promptEl = document.getElementById("quiz-prompt");
+    this.feedbackEl = document.getElementById("quiz-feedback");
+    this.answerButtons = [...document.querySelectorAll(".answer-btn")];
+    this.listenBtn = document.querySelector('[data-id="listen"]');
+    this.exitBtn = document.querySelector('[data-id="exit"]');
+
+    this.completeScoreEl = document.getElementById("complete-score");
+    this.replayBtn = document.querySelector('[data-id="replay"]');
+    this.backStartBtn = document.querySelector('[data-id="back-start"]');
+
+    this.camera = new CameraController(this.video);
+    this.hand = new HandController();
+    this.face = new FaceController();
+    this.hud = new HudRenderer(this.canvas);
+    this.selection = new SelectionController();
+    this.selection.onTrigger = (id) => this.handleTrigger(id);
+
+    this.vision = null;
+    this.missionActive = false;
+    this.cameraAvailable = false;
+    this.rafId = null;
+    this.lastDetectAt = 0;
+    this.lastHand = null;
+    this.lastFace = null;
+    this.inputLocked = false;
+
+    this.selectedSubject = null;
+    this.questions = [];
+    this.qIndex = 0;
+    this.score = 0;
+
+    this.renderSubjects();
+    this.bindStaticEvents();
+  }
+
+  renderSubjects() {
+    this.subjectGrid.innerHTML = "";
+    for (const subject of Object.keys(VOCAB)) {
+      const btn = document.createElement("button");
+      btn.className = "subject-btn";
+      btn.dataset.subject = subject;
+      btn.innerHTML = `<span class="icon">${SUBJECT_ICONS[subject] || "📚"}</span>${subject}`;
+      btn.addEventListener("click", () => this.selectSubject(subject));
+      this.subjectGrid.appendChild(btn);
+    }
+  }
+
+  selectSubject(subject) {
+    this.selectedSubject = subject;
+    for (const btn of this.subjectGrid.children) {
+      btn.classList.toggle("selected", btn.dataset.subject === subject);
+    }
+    this.startBtn.disabled = false;
+  }
+
+  bindStaticEvents() {
+    this.startBtn.addEventListener("click", () => this.onStartMission());
+
+    for (const btn of this.answerButtons) {
+      btn.addEventListener("click", () => this.selection.clickTrigger(btn.dataset.id));
+    }
+    this.listenBtn.addEventListener("click", () => this.selection.clickTrigger("listen"));
+    this.exitBtn.addEventListener("click", () => this.selection.clickTrigger("exit"));
+    this.replayBtn.addEventListener("click", () => this.selection.clickTrigger("replay"));
+    this.backStartBtn.addEventListener("click", () => this.selection.clickTrigger("back-start"));
+
+    window.addEventListener("resize", () => this.syncStageSize());
+    window.addEventListener("orientationchange", () => setTimeout(() => this.syncStageSize(), 300));
+  }
+
+  showScreen(name) {
+    for (const [key, el] of Object.entries(this.screens)) {
+      el.classList.toggle("active", key === name);
+    }
+  }
+
+  async onStartMission() {
+    if (!this.selectedSubject) return;
+    this.startBtn.disabled = true;
+    this.startStatus.textContent = "กำลังเปิดกล้องและโหลดระบบ HUD…";
+
+    speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+
+    if (!this.missionActive) {
+      await this.initMission();
+    }
+
+    this.beginQuiz(this.selectedSubject);
+    this.startBtn.disabled = false;
+  }
+
+  async initMission() {
+    try {
+      await this.camera.start();
+      this.cameraAvailable = true;
+    } catch (err) {
+      console.warn("Camera unavailable, falling back to touch-only:", err);
+      this.cameraAvailable = false;
+    }
+
+    if (this.cameraAvailable) {
+      try {
+        this.vision = await FilesetResolver.forVisionTasks(WASM_URL);
+        await this.hand.init(this.vision);
+        await this.face.init(this.vision);
+      } catch (err) {
+        console.warn("HUD model init failed, continuing touch-only:", err);
+        this.cameraAvailable = false;
+        this.camera.stop();
+      }
+    }
+
+    this.missionActive = true;
+    this.stageEl.classList.toggle("no-camera", !this.cameraAvailable);
+    this.startStatus.textContent = this.cameraAvailable
+      ? ""
+      : "ไม่พบกล้อง — เล่นด้วยการแตะหน้าจอได้เลย";
+
+    if (this.cameraAvailable) {
+      this.syncStageSize();
+      if (!this.rafId) this.rafId = requestAnimationFrame((t) => this.loop(t));
+    }
+  }
+
+  syncStageSize() {
+    if (this.video.videoWidth && this.video.videoHeight) {
+      this.stageEl.style.aspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`;
+    }
+    const rect = this.stageEl.getBoundingClientRect();
+    this.hud.resize(rect);
+  }
+
+  beginQuiz(subject) {
+    this.questions = buildQuestions(subject);
+    this.qIndex = 0;
+    this.score = 0;
+    this.subjectLabel.textContent = subject.toUpperCase();
+    this.showScreen("quiz");
+    this.registerQuizTargets();
+    this.renderQuestion();
+  }
+
+  registerQuizTargets() {
+    const map = new Map();
+    this.answerButtons.forEach((btn) => map.set(btn.dataset.id, btn));
+    map.set("listen", this.listenBtn);
+    map.set("exit", this.exitBtn);
+    this.selection.setTargets(map);
+    this.selection.setEnabled(true);
+  }
+
+  renderQuestion() {
+    const q = this.questions[this.qIndex];
+    this.progressLabel.textContent = `Question ${this.qIndex + 1}/${QUESTIONS_PER_SUBJECT}`;
+    this.posTag.textContent = POS_LABELS[q.pos] || q.pos;
+    this.promptEl.textContent = q.def;
+    this.feedbackEl.textContent = "";
+    this.feedbackEl.className = "feedback-line";
+
+    this.answerButtons.forEach((btn, i) => {
+      btn.textContent = q.choices[i];
+      btn.classList.remove("correct", "wrong");
+    });
+
+    this.inputLocked = false;
+  }
+
+  handleTrigger(id) {
+    if (id === "listen") {
+      this.speakCurrentWord();
+      return;
+    }
+    if (id === "exit") {
+      this.exitMission();
+      return;
+    }
+    if (id === "replay") {
+      this.beginQuiz(this.selectedSubject);
+      return;
+    }
+    if (id === "back-start") {
+      this.showScreen("start");
+      return;
+    }
+    if (id.startsWith("answer-") && !this.inputLocked) {
+      const idx = Number(id.split("-")[1]);
+      this.handleAnswer(idx);
+    }
+  }
+
+  speakCurrentWord() {
+    const q = this.questions[this.qIndex];
+    if (!q) return;
+    speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(q.word);
+    utter.lang = "en-US";
+    utter.rate = 0.9;
+    speechSynthesis.speak(utter);
+  }
+
+  handleAnswer(idx) {
+    const q = this.questions[this.qIndex];
+    this.inputLocked = true;
+    this.selection.setEnabled(false);
+
+    const correct = idx === q.correctIndex;
+    this.answerButtons[idx].classList.add(correct ? "correct" : "wrong");
+    if (!correct) this.answerButtons[q.correctIndex].classList.add("correct");
+
+    this.feedbackEl.textContent = correct ? `Correct! ${q.word}` : `Not quite — it was "${q.word}"`;
+    this.feedbackEl.className = "feedback-line " + (correct ? "ok" : "bad");
+
+    if (correct) this.score += 1;
+
+    setTimeout(() => this.nextQuestion(), 1100);
+  }
+
+  nextQuestion() {
+    this.qIndex += 1;
+    if (this.qIndex >= this.questions.length) {
+      this.finishQuiz();
+      return;
+    }
+    this.selection.setEnabled(true);
+    this.renderQuestion();
+  }
+
+  finishQuiz() {
+    this.completeScoreEl.textContent = `Score: ${this.score}/${this.questions.length}`;
+    this.showScreen("complete");
+    const map = new Map([
+      ["replay", this.replayBtn],
+      ["back-start", this.backStartBtn],
+    ]);
+    this.selection.setTargets(map);
+    this.selection.setEnabled(true);
+  }
+
+  exitMission() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    this.camera.stop();
+    this.hand.close();
+    this.face.close();
+    this.missionActive = false;
+    this.cameraAvailable = false;
+    this.selection.setEnabled(false);
+    this.showScreen("start");
+  }
+
+  loop(now) {
+    this.rafId = requestAnimationFrame((t) => this.loop(t));
+    if (!this.cameraAvailable) return;
+
+    const stageRect = this.stageEl.getBoundingClientRect();
+    if (stageRect.width !== this.hud.rect?.width || stageRect.height !== this.hud.rect?.height) {
+      this.hud.resize(stageRect);
+    }
+
+    if (now - this.lastDetectAt >= DETECT_INTERVAL_MS) {
+      this.lastDetectAt = now;
+      this.lastHand = this.hand.detect(this.video, now);
+      if (this.face.available) this.lastFace = this.face.detect(this.video, now);
+    }
+
+    this.hud.clear();
+    const tip = this.hud.drawHand(this.lastHand);
+    this.hud.drawVisor(this.lastFace);
+
+    const hoverState = this.selection.update(tip || null, stageRect, now);
+    for (const [id, el] of this.selection.targets) {
+      if (id === hoverState.targetId && hoverState.progress > 0) {
+        this.hud.drawRing(el.getBoundingClientRect(), hoverState.progress, true);
+      }
+    }
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  new App();
+});
+</script>
+</body>
+</html>
